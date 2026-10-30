@@ -22,7 +22,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
                       fig.width = 9, fig.height = 4.2, dpi = 150, fig.align = "center")
 
-# All packages used in this document, loaded once. No install.packages().
+# All packages used in this document, loaded once here.
 library(digest)    # SHA-256 checks of raw and frozen files
 library(knitr)     # tables
 library(pdftools)  # re-reading the raw CIS PDFs at knit time
@@ -45,6 +45,16 @@ html_table <- function(head_html, rows, cls = "rtable", note = NULL, caption = N
     if (!is.null(note)) paste0("<p class='table-note'>", note, "</p>"), "</div>"))
 }
 td <- function(x, cls = NULL) paste0("<td", if (!is.null(cls)) paste0(" class='", cls, "'"), ">", x, "</td>")
+
+# Data: all inputs (raw CIS PDFs, Spotify charts, derived and frozen files) are on GitHub.
+# Inside the project folder the local copy is used; anywhere else this line downloads the project first.
+data_url <- "https://github.com/alirzgenc-arch/Genc_AliRiza_FinalProject/archive/refs/heads/main.zip"
+if (!file.exists("data/processed/model_frame_monthly.csv")) {
+  zf <- tempfile(fileext = ".zip")
+  utils::download.file(data_url, zf, mode = "wb", quiet = TRUE)
+  utils::unzip(zf, exdir = tempdir())
+  knitr::opts_knit$set(root.dir = file.path(tempdir(), "Genc_AliRiza_FinalProject-main"))
+}
 ```
 
 ```{css, echo=FALSE}
@@ -205,7 +215,7 @@ early_bias2  <- mean(r2_25$prediction[-last3] - r2_25$observed[-last3])
 
 Each forecast is issued on the 10th of a month and targets the CIS estimates first published between the 10th of the next month and the 10th of the month after. This is a **prediction** question; nothing here identifies a cause.
 
-**Why a political scientist should care.** Digital traces are often proposed as early signals of political change, yet they rarely survive out-of-sample tests (Gayo-Avello 2013); such tests show whether a measure carries information that existing indicators lack (Cranmer and Desmarais 2017). Vox is a nationalist radical-right party. In the 2018 Andalusian election, its support was better explained by concerns about devolution than by attitudes to immigration (Turnbull-Dugarte 2019). Spain's most visible drill scene, M.D.L.R., comes from working-class, migrant-descended neighbourhoods; Ahmed González (2024) discusses Morad and Beny Jr, sons of Moroccan immigrants from L'Hospitalet, as part of this scene. Cyril Kamer, a Spain-based rapper in my protocol, is not discussed there, so I claim no affiliation. If this scene's national visibility moved with the climate Vox mobilises, its chart presence might carry a forecasting signal. The literature gives little reason to expect one, so this is a demanding test.
+**Why a political scientist should care.** Digital traces are often proposed as early signals of political change, yet they rarely survive out-of-sample tests (Gayo-Avello 2013); such tests show whether a measure carries information that existing indicators lack (Cranmer and Desmarais 2017). Vox is a nationalist radical-right party. In the 2018 Andalusian election, its support was better explained by concerns about devolution than by attitudes to immigration (Turnbull-Dugarte 2019). Spain's most visible drill scene, M.D.L.R., comes from working-class, migrant-descended neighbourhoods; Ahmed González (2024) discusses Morad and Beny Jr, sons of Moroccan immigrants from L'Hospitalet, as part of this scene. Cyril Kamer, a Spain-based rapper in my protocol, is not discussed there, so I claim no affiliation. If this scene's national visibility moved with the climate Vox mobilises, its chart presence might carry a forecasting signal. The literature gives little reason to expect one.
 
 **Outcome.** The CIS *estimación de voto* for Vox, in percent of the valid vote: a published, model-based polling series, neither the *voto directo* column (percent of the census) nor an election result. Each value was extracted from the original PDF by code and checked by eye (`data/interim/cis_vox_manual_check.csv`). Each barometer is dated by its official first-release (*avance*) date. CIS regenerated six 2024 PDFs on one day, so for these I also checked the value against same-day press reports of the first release. Windows without a release (August has no barometer) are dropped, not filled.
 
@@ -267,7 +277,7 @@ html_table(
   note = "July 2024 has no forecast because its target window (10 Aug &ndash; 10 Sep) contains no CIS release.")
 ```
 
-Training thus grows only from `r min(fp$n_train)` to `r max(fp$n_train)` cases (Table 3). After tuning, each model was refitted on all `r n_common` development cases, and the code, model frame and fitted models were hashed (17:38, 29 October 2026). I then opened 2025 once, as an **exploratory out-of-time test** (scoring lock 18:10). Today's files match that manifest; the order of events rests on file timestamps, not an authenticated log, and the freeze does not undo earlier exposure to 2025 polling news (Section 4).
+Training thus grows only from `r min(fp$n_train)` to `r max(fp$n_train)` cases (Table 3). After tuning, each model was refitted on all `r n_common` development cases, and the code, model frame and fitted models were hashed (17:38, 29 October 2026). I then opened 2025 once, as an **exploratory out-of-time test** (scoring lock 18:10). Today's files match that manifest, though the order of events rests on file timestamps, not an authenticated log.
 
 <details class="repro"><summary>Reproducibility checks run at every knit (all must pass for this page to exist)</summary>
 
@@ -331,7 +341,7 @@ Checks 1&ndash;2 run from the raw CIS PDFs; the music features enter through the
 
 # What I found, and how well I measured it
 
-**The streaming indicators did not deliver robust incremental forecasting value.** They helped a little during development and hurt on the 2025 test, and persistence was more accurate than every learned model in both periods.
+**The streaming indicators did not deliver robust incremental forecasting value, and persistence beat every learned model in both periods.**
 
 ```{r results-table, echo=FALSE}
 lab <- c(M0 = "Persistence", M1 = "Polling-only ridge", M2 = "Polling + Spotify ridge")
@@ -408,7 +418,7 @@ html_table(
 
 **What this establishes.** With this sample and procedure, the artists' chart-listed streams did not improve forecasts robustly, did not beat persistence, and the development gain reversed out of time. **What it does not establish.** It does not show that cultural visibility is unrelated to radical-right politics, that a different measure or model would fail, or anything causal in either direction.
 
-**Limitation 1: too few independent forecasts, reused for tuning.** M2 has six inputs and at most `r max(fp$n_train)` training months. The same `r n_val` forecasts chose λ and produced the development scores. Tuning chose almost no shrinkage for M2 and heavy shrinkage for M1, a pattern consistent with fitting noise and with the extreme late-2025 music-model forecasts; I did not inspect the 2025 inputs further. The remedy is not more features but more independent targets (for example several pollsters under the same first-release rules, making the weekly design feasible) and nested tuning.
+**Limitation 1: too few independent forecasts, reused for tuning.** M2 has six inputs and at most `r max(fp$n_train)` training months. The same `r n_val` forecasts chose λ and produced the development scores. Tuning chose almost no shrinkage for M2 and heavy shrinkage for M1, a pattern consistent with fitting noise and with the extreme late-2025 music-model forecasts. The remedy is not more features but more independent targets (for example several pollsters under the same first-release rules, making the weekly design feasible) and nested tuning.
 
 **Limitation 2: the music measure sees chart hits, not audiences.** A Top 200 count records an artist only in weeks with a hit; two planned artists never charted, and Cyril Kamer was absent in `r zero_cyril` of `r n_months_music` months. The variable may track release cycles and platform dynamics more than political context. A valid test needs artist-level stream totals for all five artists, defined before modelling.
 
@@ -432,7 +442,7 @@ Turnbull-Dugarte, S. J. (2019). Explaining the end of Spanish exceptionalism and
 
 Zou, H., & Hastie, T. (2005). Regularization and variable selection via the elastic net. *Journal of the Royal Statistical Society: Series B*, 67(2), 301–320.
 
-**Data.** Centro de Investigaciones Sociológicas, *Barómetros*, "Estimación de voto" PDFs, November 2022 – November 2025 (cis.es), with first-release dates and source links in `data/metadata/`. Spotify Charts, Weekly Top Songs Spain, December 2022 – September 2025 (charts.spotify.com). The instructor advised that no permission was needed for this course project; the raw files are included in the project repository (`README_REPRODUCE.md`).
+**Data and code:** https://github.com/alirzgenc-arch/Genc_AliRiza_FinalProject (downloaded automatically when this file is knitted outside the project folder). Centro de Investigaciones Sociológicas, *Barómetros*, "Estimación de voto" PDFs, November 2022 – November 2025 (cis.es), with first-release dates and source links in `data/metadata/`. Spotify Charts, Weekly Top Songs Spain, December 2022 – September 2025 (charts.spotify.com). The instructor advised that no permission was needed for this course project; the raw files are included in the project repository (`README_REPRODUCE.md`).
 
 # Appendix: AI use {-}
 

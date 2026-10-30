@@ -104,6 +104,7 @@ The scripts and value-free logs are in `reports/audit/repro/scripts/` and `repor
 | L4-1 | L4 | Chain runs in an environment independent of the author's | VM conda env | identical | identical (L1–L3 above) | PASS (environment) | — |
 | L4-2 | L4 | Rebuilt intermediates can replace the frozen ones and still knit | `subst/`: rebuilt `cis_vox_verified.csv` swapped in | — | knit stops at check 5: the lock binds the original bytes, which carry a timestamp column | By design | README: rebuild in a copy and compare; never replace frozen files |
 | L4-3 | L4 | Second physical computer rebuilds from raw | repository snapshot in the cloud container (x86-64, R 4.3.3, glmnet 4.1.8): R/00–07 → `L3_compare.py` → `L2_integrity.R` → knit | identical | 14/15 byte-identical (+ the timestamp column); date checks TRUE; L2 13 PASS + 1 expected FAIL; knit exit 0, six checks pass | PASS | A fresh clone from GitHub after upload repeats this |
+| L4-4 | L4 | The .Rmd alone (as submitted on Brightspace) reproduces the report on another computer | empty folder in the cloud container; knit downloads the GitHub repository | six checks pass | exit 0; six checks pass; rendered text identical to the in-project build (508/508 lines) | PASS | — |
 
 ## 5. Leakage compliance
 

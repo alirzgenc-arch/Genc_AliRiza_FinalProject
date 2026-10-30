@@ -52,3 +52,13 @@ Line numbers refer to the revised `.Rmd`.
 | New file | `README_REPRODUCE.md` | Stage B L0/L4 |
 
 Impact on numbers: NONE.
+
+## Guide compliance pass, 30 Oct ≈15:45
+| Where | Change | Why (Final Project Guide) |
+|---|---|---|
+| Setup chunk | Downloads the project from GitHub (`archive/refs/heads/main.zip`) when the .Rmd is knitted outside the project folder; it then knits from there | "a line in the document that downloads it from there"; must "run from raw inputs to reported numbers on a machine that is not yours" |
+| References: Data | Repository link added | Same |
+| Setup comment | Dropped the phrase naming `install.packages()` | "No install.packages() in the document" |
+| S2, S3, S4 | Four small trims (≈40 words): S3 opening, the freeze sentence, L1, the S1 closing clause | Prose now ≈1,481 words (limit 1,500) |
+
+Tested: the .Rmd alone in an empty folder (another computer, R 4.3.3) downloads the repository, passes all six checks, and renders text identical to the in-project build. Impact on numbers: NONE.
