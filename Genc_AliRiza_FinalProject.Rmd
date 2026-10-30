@@ -47,14 +47,19 @@ html_table <- function(head_html, rows, cls = "rtable", note = NULL, caption = N
 td <- function(x, cls = NULL) paste0("<td", if (!is.null(cls)) paste0(" class='", cls, "'"), ">", x, "</td>")
 
 # Data: all inputs (raw CIS PDFs, Spotify charts, derived and frozen files) are on GitHub.
-# Inside the project folder the local copy is used; anywhere else this line downloads the project first.
+# Inside the project folder the local copy is used; anywhere else the project is downloaded first.
 data_url <- "https://github.com/alirzgenc-arch/Genc_AliRiza_FinalProject/archive/refs/heads/main.zip"
-if (!file.exists("data/processed/model_frame_monthly.csv")) {
+root <- "."                                    # project folder when this file sits inside it
+if (!file.exists(file.path(root, "data/processed/model_frame_monthly.csv"))) {
+  options(timeout = max(600, getOption("timeout")))
   zf <- tempfile(fileext = ".zip")
-  utils::download.file(data_url, zf, mode = "wb", quiet = TRUE)
-  utils::unzip(zf, exdir = tempdir())
-  knitr::opts_knit$set(root.dir = file.path(tempdir(), "Genc_AliRiza_FinalProject-main"))
+  ok <- tryCatch(utils::download.file(data_url, zf, mode = "wb", quiet = TRUE) == 0,
+                 error = function(e) FALSE)
+  if (!ok) stop("Could not download the project data from ", data_url, " (check the internet connection).")
+  ex <- file.path(tempdir(), "project_data"); utils::unzip(zf, exdir = ex)
+  root <- list.dirs(ex, recursive = FALSE)[1]  # the unzipped repository folder
 }
+p <- function(...) file.path(root, ...)        # every input path goes through p()
 ```
 
 ```{css, echo=FALSE}
@@ -158,19 +163,19 @@ details.repro summary { cursor: pointer; font-family: -apple-system, BlinkMacSys
 ```
 
 ```{r load, include=FALSE}
-cis  <- read.csv("data/processed/cis_vox_verified.csv", stringsAsFactors = FALSE)
-mf   <- read.csv("data/processed/model_frame_monthly.csv", stringsAsFactors = FALSE)
+cis  <- read.csv(p("data/processed/cis_vox_verified.csv"), stringsAsFactors = FALSE)
+mf   <- read.csv(p("data/processed/model_frame_monthly.csv"), stringsAsFactors = FALSE)
 for (v in c("origin", "target_mature_at")) mf[[v]] <- as.Date(mf[[v]])
-dev  <- read.csv("reports/results/model_metrics.csv")
-t25  <- read.csv("reports/results/test2025_metrics.csv")
-lam  <- read.csv("reports/results/selected_lambdas.csv")
-fp   <- read.csv("data/processed/forward_predictions.csv")
-p25  <- read.csv("data/quarantine/test_2025/work/test2025_predictions.csv")
-case25 <- read.csv("reports/qa/test2025_cases.csv")
-aud  <- read.csv("reports/qa/artist_name_audit.csv")
-mq   <- read.csv("reports/qa/music_feature_qa.csv")
-minv <- read.csv("reports/qa/music_file_inventory.csv")
-feas <- readLines("reports/qa/poll_feasibility_summary.txt")
+dev  <- read.csv(p("reports/results/model_metrics.csv"))
+t25  <- read.csv(p("reports/results/test2025_metrics.csv"))
+lam  <- read.csv(p("reports/results/selected_lambdas.csv"))
+fp   <- read.csv(p("data/processed/forward_predictions.csv"))
+p25  <- read.csv(p("data/quarantine/test_2025/work/test2025_predictions.csv"))
+case25 <- read.csv(p("reports/qa/test2025_cases.csv"))
+aud  <- read.csv(p("reports/qa/artist_name_audit.csv"))
+mq   <- read.csv(p("reports/qa/music_feature_qa.csv"))
+minv <- read.csv(p("reports/qa/music_file_inventory.csv"))
+feas <- readLines(p("reports/qa/poll_feasibility_summary.txt"))
 
 n_cis     <- nrow(cis)
 n_origins <- nrow(mf)
@@ -283,7 +288,7 @@ Training thus grows only from `r min(fp$n_train)` to `r max(fp$n_train)` cases (
 
 ```{r repro, echo=TRUE}
 # 1. Raw CIS PDFs are byte-identical to the inventory, and every value was checked by eye.
-pdf_files <- file.path("data/raw/cis_2023_2024", cis$year, cis$file)
+pdf_files <- p("data/raw/cis_2023_2024", cis$year, cis$file)
 stopifnot(all(vapply(pdf_files, sha, "") == cis$sha256), all(cis$verified_by_eye))
 
 # 2. Raw PDFs -> targets: re-extract the Vox estimate (3rd number of the VOX row) now.
@@ -304,16 +309,16 @@ read_manifest <- function(f) {
 }
 
 # 3. The frozen model, code and model frame are unchanged since the freeze.
-man <- read_manifest("reports/results/fit_freeze_manifest.txt")
+man <- read_manifest(p("reports/results/fit_freeze_manifest.txt"))
 stopifnot(nrow(man) == 4)
-stopifnot(all(vapply(man[, 1], sha, "") == man[, 2]))
+stopifnot(all(vapply(p(man[, 1]), sha, "") == man[, 2]))
 
 # 4. Rebuild: re-run the fitting script on the frozen model frame in a temporary folder
 #    and compare with the frozen development metrics.
 tmp <- tempfile("rebuild"); dir.create(file.path(tmp, "R"), recursive = TRUE)
 dir.create(file.path(tmp, "data/processed"), recursive = TRUE)
-invisible(file.copy("R/08_fit_models.R", file.path(tmp, "R")))
-invisible(file.copy("data/processed/model_frame_monthly.csv", file.path(tmp, "data/processed")))
+invisible(file.copy(p("R/08_fit_models.R"), file.path(tmp, "R")))
+invisible(file.copy(p("data/processed/model_frame_monthly.csv"), file.path(tmp, "data/processed")))
 local({                       # run inside the temporary folder only; working directory is restored
   owd <- setwd(tmp); on.exit(setwd(owd))
   invisible(capture.output(source("R/08_fit_models.R", local = new.env())))
@@ -322,9 +327,9 @@ rebuilt <- read.csv(file.path(tmp, "reports/results/model_metrics.csv"))
 stopifnot(max(abs(as.matrix(rebuilt[, 3:6]) - as.matrix(dev[, 3:6]))) < 1e-8)
 
 # 5. The 2025 test was scored once, with exactly these inputs and code.
-lock <- read_manifest("reports/results/test2025_lock.txt")
+lock <- read_manifest(p("reports/results/test2025_lock.txt"))
 stopifnot(nrow(lock) == 10)
-stopifnot(all(vapply(lock[, 1], sha, "") == lock[, 2]))
+stopifnot(all(vapply(p(lock[, 1]), sha, "") == lock[, 2]))
 
 # 6. Reported metrics equal those recomputed from the frozen prediction files.
 recompute <- function(p) do.call(rbind, lapply(split(p, list(p$design, p$model), drop = TRUE), function(d)
