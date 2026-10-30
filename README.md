@@ -25,8 +25,8 @@ The project asks whether chart-listed Spotify streams for Morad, Beny Jr and Cyr
 Requires R with `rmarkdown`, `knitr`, `digest`, `pdftools` and `glmnet`.
 
 ```bash
-git clone https://github.com/alirzgenc-arch/genc_aliriza_finalproject.git
-cd genc_aliriza_finalproject
+git clone https://github.com/alirzgenc-arch/Genc_AliRiza_FinalProject.git
+cd Genc_AliRiza_FinalProject
 Rscript --vanilla -e 'rmarkdown::render("Genc_AliRiza_FinalProject.Rmd")'
 ```
 
