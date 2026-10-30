@@ -1,0 +1,5 @@
+"design","model","lambda","grid_index","boundary_warning"
+"Ridge","M1",3.30359912012834,29,FALSE
+"Ridge","M2",0.00393492726309584,62,FALSE
+"ElasticNet_check","M1",0.285559230199011,41,FALSE
+"ElasticNet_check","M2",0.00482552204274128,61,FALSE

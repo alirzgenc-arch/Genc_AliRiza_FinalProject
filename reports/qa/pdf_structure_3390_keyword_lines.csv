@@ -1,0 +1,28 @@
+"keyword","page","line","masked_text","n_columns"
+"estimacion",1,1,"ESTIMACIÓN DE VOTO",1
+"estimacion",2,2,"Estudio nº ####. Barómetro de enero ####                                                               ESTIMACIÓN DE VOTO",2
+"estimacion",2,9,"Ficha técnica estimación barómetro E####",1
+"estimacion",2,11,"El Centro de Investigaciones Sociológicas aplica desde hace años una metodología de estimación de apoyo electoral",1
+"estimacion",2,17,"(estimación) de cada una de ellas en diferentes presupuestos. El resultado de dicha labor desarrolla teórica y",1
+"estimacion",2,27,"esta manera, cualquiera puede aplicar sus propios modelos para el cálculo de estimaciones de voto, modelos que",1
+"estimacion",2,28,"pueden dar lugar a estimaciones diferentes a las del CIS.",1
+"estimacion",2,51,"y métodos prospectivos se desarrolla más ampliamente en Alaminos, A (####) El método de escenarios en la estimación de",1
+"estimacion",3,2,"Estudio nº ####. Barómetro de enero ####                                ESTIMACIÓN DE VOTO",2
+"estimacion",3,6,"Gráficos Pareto distribución escenarios            Estimación",2
+"estimacion",4,2,"Estudio nº ####. Barómetro de enero ####                                                       ESTIMACIÓN DE VOTO",2
+"estimacion",4,20,"estimación MPTA (##%)",1
+"estimacion",5,2,"Estudio nº ####. Barómetro de enero ####                                                ESTIMACIÓN DE VOTO",2
+"estimacion",5,10,"Voto directo en                           Estimación de",2
+"estimacion",5,48,"estimación.",1
+"voto_valido",5,13,"censo)                                 voto válido)",2
+"intencion",2,12,"basada en la especificación de escenarios. Una medición por escenarios que no posee intención prospectiva y se",1
+"vox",4,24,"VOX                           ,##              ,##           Sí",4
+"vox",5,20,"VOX                                     #,#                 ±#,#                  ##,#",4
+"pp",4,23,"PP                            -,##             ,##           Sí",4
+"pp",5,16,"PP                                     ##,#                 ±#,#                  ##,#",4
+"psoe",4,22,"PSOE                          ,##              ,##           Sí",4
+"psoe",5,15,"PSOE                                   ##,#                 ±#,#                  ##,#",4
+"abstencion",5,38,"Abstención (“No votaría”)               #,#                 ±#,#",3
+"blanco_nulo",5,36,"En blanco                               #,#                 ±#,#                   #,#",4
+"blanco_nulo",5,37,"Voto nulo                               #,#                 ±#,#",3
+"no_sabe",5,39,"No sabe                                ##,#                 ±#,#",3

@@ -1,0 +1,7 @@
+# RStudio / OS files
+.Rproj.user/
+.Rhistory
+.RData
+.DS_Store
+# Local pre-revision backups (superseded versions of the report)
+submission/

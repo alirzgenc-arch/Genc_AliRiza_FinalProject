@@ -1,0 +1,15 @@
+Spain v4.1 - R03 PDF structure audit (digits masked, no values)
+File: data/raw/cis_2023_2024/2023/3390_Estimacionpdf.pdf
+Study ID (filename hint): 3390 | SHA-256 matches inventory: YES
+PDF created: 2023-01-18 08:07 | modified: 2023-01-18 08:07 | producer: Adobe PDF Library 11.0
+Pages: 5 | pages with text layer: 5/5
+Characters per page: 63, 3543, 472, 1236, 3096
+Keyword line counts: abstencion=1, blanco_nulo=2, estimacion=15, intencion=1, no_sabe=1, pp=2, psoe=2, voto_valido=1, vox=2
+"estimacion" found: TRUE | "voto valido" found: TRUE
+VOX lines: 2 on page(s) 4, 5 | column counts: 4, 4
+Decimal style: COMMA (12,3) (comma-numbers=74, dot-numbers=0)
+Provisional verdict: TEXT LAYER OK + consistent VOX row layout -> parser looks feasible (confirm visually)
+
+Masked VOX lines:
+  p4 l24: VOX                           ,##              ,##           Sí
+  p5 l20: VOX                                     #,#                 ±#,#                  ##,#

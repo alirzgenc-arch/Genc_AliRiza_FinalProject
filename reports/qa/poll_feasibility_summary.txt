@@ -1,0 +1,10 @@
+Spain v4.1 - R06/R07 poll-only feasibility (roster: CIS only, D47). Counts only.
+Release dates: 24 official / 0 provisional (PDF created)
+Months 2023-24 without a CIS release: 2023-08, 2024-08
+Releases within 2 days of the 10th (official date decides): 3427, 3441, 3450, 3468
+
+WEEKLY  training pairs before F1: 10 (need >= 30) | blocks F1/F2/F3: 3/3/2 (need >= 8 each) -> FAIL
+MONTHLY training pairs before F1: 9 (need >= 8)  | blocks F1/F2/F3: 3/3/2 (need >= 2 each, >= 7 total) -> PASS
+Monthly pre-F1 origins lost (no 2 prior releases or no target): 2023-07-10
+
+Design per Methods Sec. 9 switch rule: FB-M MONTHLY (weekly failed; instructor confirmation of unit change required)

@@ -1,0 +1,465 @@
+---
+title: "Can Urban-Music Streaming Improve Forecasts of Vox Support?"
+subtitle: "A monthly prediction test using CIS estimates and Spotify's Spain Top 200"
+author: "Ali Rıza Genç (s5265126) · Applied AI for Political Scientists, Final Project (Track A) · Leiden University"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 1
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
+    number_sections: true
+    code_folding: hide
+    theme: default
+    highlight: tango
+    self_contained: true
+    df_print: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
+                      fig.width = 9, fig.height = 4.2, dpi = 150, fig.align = "center")
+
+# All packages used in this document, loaded once. No install.packages().
+library(digest)    # SHA-256 checks of raw and frozen files
+library(knitr)     # tables
+library(pdftools)  # re-reading the raw CIS PDFs at knit time
+library(glmnet)    # used by R/08_fit_models.R in the rebuild check
+
+set.seed(2026)     # no randomness is used; set for the course rule
+
+# Helpers: every number in the prose is computed, never typed.
+f2  <- function(x) formatC(x, format = "f", digits = 2)
+pp  <- function(x) paste0(formatC(x, format = "f", digits = 2), " pp")
+sgn <- function(x) paste0(ifelse(x > 0, "+", "−"), formatC(abs(x), format = "f", digits = 2), " pp")
+get <- function(d, design, model, col) d[d$design == design & d$model == model, col]
+sha <- function(f) digest::digest(file = f, algo = "sha256")
+html_table <- function(head_html, rows, cls = "rtable", note = NULL, caption = NULL) {
+  body <- paste0("<tr>", vapply(rows, function(r) paste0(r, collapse = ""), ""), "</tr>", collapse = "\n")
+  knitr::asis_output(paste0(
+    "<div class='table-wrap'><table class='", cls, "'>",
+    if (!is.null(caption)) paste0("<caption>", caption, "</caption>"),
+    "<thead>", head_html, "</thead><tbody>", body, "</tbody></table>",
+    if (!is.null(note)) paste0("<p class='table-note'>", note, "</p>"), "</div>"))
+}
+td <- function(x, cls = NULL) paste0("<td", if (!is.null(cls)) paste0(" class='", cls, "'"), ">", x, "</td>")
+```
+
+```{css, echo=FALSE}
+/* ---------- design tokens ---------- */
+:root { --ink:#243044; --head:#152238; --accent:#235A83; --muted:#66758A;
+        --rule:#DFE5EC; --panel:#F4F7FA; --bg:#FBFCFE; --obs:#1b1b1b; }
+html { scroll-behavior: auto; }
+body { background: var(--bg); color: var(--ink); font-family: Georgia, "Times New Roman", serif;
+       font-size: 17.5px; line-height: 1.65; }
+.main-container { max-width: 1240px; padding-left: 24px; padding-right: 24px; }
+.section.level1, .section.level2, #header, .table-wrap, .figure, p { max-width: 790px; }
+p { margin: 0 0 1.05em 0; }
+a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+a:focus, button:focus, summary:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- header ---------- */
+#header { margin: 2.2rem 0 1.6rem 0; padding-bottom: 1.2rem; border-bottom: 1px solid var(--rule); }
+h1.title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+           font-size: 36px; line-height: 1.18; font-weight: 700; color: var(--head); margin: 0 0 .35rem 0; }
+h3.subtitle { font-family: Georgia, serif; font-style: italic; font-size: 20px; font-weight: 400;
+              color: var(--muted); margin: 0 0 .9rem 0; line-height: 1.35; }
+h4.author, h4.date { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+                     font-size: 14px; font-weight: 400; color: var(--muted); margin: .15rem 0; }
+
+/* ---------- headings ---------- */
+h1, h2, h3, h4 { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; color: var(--head); }
+.section.level1 { padding-top: 1.6rem; }
+.section.level1 > h1 { font-size: 26px; font-weight: 650; margin: 1.2rem 0 1rem 0;
+                       padding-bottom: .35rem; border-bottom: 1px solid var(--rule); }
+h1 .header-section-number { color: var(--accent); margin-right: .4rem; }
+.section.level2 > h2 { font-size: 19px; font-weight: 650; margin: 1.6rem 0 .6rem 0; }
+
+/* ---------- key finding & research question ---------- */
+.keyfinding { background: var(--panel); border-left: 3px solid var(--accent); padding: .9rem 1.1rem;
+              margin: 0 0 1.6rem 0; font-size: 16.5px; max-width: 790px; }
+.keyfinding strong { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+                     font-size: 13px; letter-spacing: .04em; text-transform: uppercase; color: var(--accent);
+                     display: block; margin-bottom: .2rem; }
+.rq { font-size: 18.5px; line-height: 1.5; color: var(--head); border-left: 3px solid var(--rule);
+      padding: .2rem 0 .2rem 1rem; margin: .4rem 0 1.2rem 0; max-width: 790px; }
+
+/* ---------- tables ---------- */
+.table-wrap { overflow-x: auto; margin: 1.1rem 0 1.4rem 0; }
+table.rtable { border-collapse: collapse; width: 100%;
+               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; font-size: 14.5px; }
+table.rtable caption { caption-side: top; text-align: left; color: var(--head); font-weight: 650;
+                       font-size: 15px; padding: 0 0 .5rem 0; }
+table.rtable th { font-weight: 600; color: var(--head); border-bottom: 1.5px solid var(--head);
+                  padding: .45rem .6rem; text-align: left; vertical-align: bottom; }
+table.rtable th.grp { text-align: center; border-bottom: 1px solid var(--rule); font-weight: 600; }
+table.rtable td { padding: .42rem .6rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+table.rtable td.num, table.rtable th.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.rtable tr.best td { background: #EEF4F9; }
+table.rtable tbody tr:last-child td { border-bottom: 1.5px solid var(--head); }
+.table-note { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+              font-size: 13px; color: var(--muted); margin: .45rem 0 0 0; line-height: 1.45; }
+table.ailog { font-size: 13px; table-layout: fixed; }
+table.ailog td, table.ailog th { padding: .38rem .45rem; overflow-wrap: anywhere; }
+table.ailog col.c1 { width: 4%; } table.ailog col.c2 { width: 11%; } table.ailog col.c3 { width: 11%; }
+table.ailog col.c4 { width: 30%; } table.ailog col.c5 { width: 44%; }
+
+/* ---------- figures ---------- */
+.figure { margin: 1.2rem 0 1.4rem 0; }
+.figure img { max-width: 100%; height: auto; }
+p.caption { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; font-size: 13.5px;
+            color: var(--muted); line-height: 1.5; margin-top: .4rem; text-align: left; }
+p, li, td { overflow-wrap: break-word; } a { overflow-wrap: anywhere; }
+.table-wrap { max-width: 100%; }
+
+/* ---------- code & reproducibility details ---------- */
+pre, code { font-size: 13px; }
+pre { background: var(--panel); border: 1px solid var(--rule); border-radius: 3px; }
+.btn-default.btn-xs { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+                      color: var(--muted); border-color: var(--rule); background: #fff; }
+details.repro { background: var(--panel); border: 1px solid var(--rule); padding: .6rem .9rem;
+                margin: 1rem 0 1.4rem 0; max-width: 790px; font-size: 15px; }
+details.repro summary { cursor: pointer; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+                        font-weight: 600; color: var(--head); }
+
+/* ---------- table of contents ---------- */
+#TOC { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; font-size: 14px;
+       border: none; border-left: 1px solid var(--rule); background: transparent; }
+.tocify .list-group-item { border: none; background: transparent; color: var(--muted); padding: 5px 10px; }
+.tocify .list-group-item.active, .tocify .list-group-item:hover { color: var(--head); background: var(--panel);
+       border-left: 2px solid var(--accent); }
+.tocify-header .tocify-item:nth-last-child(-n+2) { font-size: 13px; }
+
+/* ---------- small screens & print ---------- */
+@media (max-width: 767px) {
+  body { font-size: 16.5px; }
+  h1.title { font-size: 28px; }
+  .main-container { padding-left: 16px; padding-right: 16px; }
+}
+@media print {
+  #TOC, .code-folding-btn, .btn-group, details.repro { display: none !important; }
+  .col-md-9, .col-sm-8 { width: 100% !important; }
+  body { background: #fff; font-size: 11.5pt; }
+  table.rtable thead { display: table-header-group; }
+  .figure, table { page-break-inside: avoid; }
+}
+```
+
+```{r load, include=FALSE}
+cis  <- read.csv("data/processed/cis_vox_verified.csv", stringsAsFactors = FALSE)
+mf   <- read.csv("data/processed/model_frame_monthly.csv", stringsAsFactors = FALSE)
+for (v in c("origin", "target_mature_at")) mf[[v]] <- as.Date(mf[[v]])
+dev  <- read.csv("reports/results/model_metrics.csv")
+t25  <- read.csv("reports/results/test2025_metrics.csv")
+lam  <- read.csv("reports/results/selected_lambdas.csv")
+fp   <- read.csv("data/processed/forward_predictions.csv")
+p25  <- read.csv("data/quarantine/test_2025/work/test2025_predictions.csv")
+case25 <- read.csv("reports/qa/test2025_cases.csv")
+aud  <- read.csv("reports/qa/artist_name_audit.csv")
+mq   <- read.csv("reports/qa/music_feature_qa.csv")
+minv <- read.csv("reports/qa/music_file_inventory.csv")
+feas <- readLines("reports/qa/poll_feasibility_summary.txt")
+
+n_cis     <- nrow(cis)
+n_origins <- nrow(mf)
+n_common  <- sum(mf$common_case)
+n_weeks   <- nrow(minv)
+wk_train  <- as.integer(sub(".*before F1: ([0-9]+).*", "\\1", grep("^WEEKLY", feas, value = TRUE)))
+cut_f1    <- as.Date("2024-01-01")
+n_tr_f1   <- sum(mf$common_case & mf$origin < cut_f1 & mf$target_mature_at <= cut_f1)
+n_val     <- get(dev, "Baseline", "M0", "n")
+n_test    <- get(t25, "Baseline", "M0", "n")
+lost_dev  <- format(mf$origin[!mf$common_case], "%B %Y")
+lost_25   <- format(as.Date(case25$origin[!case25$common_case]), "%B %Y")
+wk_of     <- function(s) aud$weeks_in_top200[aud$spelling == s]
+zero_cyril <- sum(mq$artist_key == "cyril_kamer" & mq$weeks_zero == mq$weeks_used)
+n_months_music <- length(unique(mq$month_m1))
+
+mae <- function(t, d, m) get(t, d, m, "MAE")
+d_dev <- mae(dev, "Ridge", "M2") - mae(dev, "Ridge", "M1")
+d_25  <- mae(t25, "Ridge", "M2") - mae(t25, "Ridge", "M1")
+c_dev <- mae(dev, "ElasticNet_check", "M2") - mae(dev, "ElasticNet_check", "M1")
+c_25  <- mae(t25, "ElasticNet_check", "M2") - mae(t25, "ElasticNet_check", "M1")
+# The prose was written for these signs; the knit stops if the frozen results ever differ.
+stopifnot(d_dev < 0, d_25 > 0, c_dev < 0, c_25 > 0,
+          mae(dev, "Baseline", "M0") < mae(dev, "Ridge", "M2"),
+          mae(t25, "Baseline", "M0") < mae(t25, "Ridge", "M1"))
+lam_r1 <- lam$lambda[lam$design == "Ridge" & lam$model == "M1"]
+lam_r2 <- lam$lambda[lam$design == "Ridge" & lam$model == "M2"]
+r2_25  <- p25[p25$design == "Ridge" & p25$model == "M2", ]; r2_25 <- r2_25[order(r2_25$origin), ]
+e2_25  <- abs(r2_25$prediction - r2_25$observed)
+last3  <- tail(seq_len(nrow(r2_25)), 3)
+share3 <- sum(e2_25[last3]) / sum(e2_25)
+last3_months <- format(as.Date(r2_25$origin[last3]), "%B")
+last3_range  <- range(r2_25$prediction[last3])
+early_bias2  <- mean(r2_25$prediction[-last3] - r2_25$observed[-last3])
+```
+
+<div class="keyfinding"><strong>Main finding</strong>Adding the artists' chart-listed Spotify streams lowered the error of a polling-only ridge model by `r f2(-d_dev)` percentage points in 2024 development validation but raised it by `r f2(d_25)` points on the frozen 2025 test. Simply repeating the last CIS estimate beat every learned model in both periods.</div>
+
+# Question and data
+
+<p class="rq">Do chart-listed Spotify streams for Morad, Beny Jr and Cyril Kamer improve forecasts of Vox's national CIS-published vote-share estimates beyond the information contained in earlier CIS releases?</p>
+
+Each forecast is issued on the 10th of a month and targets the CIS estimates first published between the 10th of the next month and the 10th of the month after. This is a **prediction** question; nothing here identifies a cause.
+
+**Why a political scientist should care.** Digital traces are often proposed as early signals of political change, yet they rarely survive out-of-sample tests (Gayo-Avello 2013); such tests show whether a measure carries information that existing indicators lack (Cranmer and Desmarais 2017). Vox is a nationalist radical-right party. In the 2018 Andalusian election, its support was better explained by concerns about devolution than by attitudes to immigration (Turnbull-Dugarte 2019). Spain's most visible drill scene, M.D.L.R., comes from working-class, migrant-descended neighbourhoods; Ahmed González (2024) discusses Morad and Beny Jr, sons of Moroccan immigrants from L'Hospitalet, as part of this scene. Cyril Kamer, a Spain-based rapper in my protocol, is not discussed there, so I claim no affiliation. If this scene's national visibility moved with the climate Vox mobilises, its chart presence might carry a forecasting signal. The literature gives little reason to expect one, so this is a demanding test.
+
+**Outcome.** The CIS *estimación de voto* for Vox, in percent of the valid vote: a published, model-based polling series, neither the *voto directo* column (percent of the census) nor an election result. Each value was extracted from the original PDF by code and checked by eye (`data/interim/cis_vox_manual_check.csv`). Each barometer is dated by its official first-release (*avance*) date. CIS regenerated six 2024 PDFs on one day, so for these I also checked the value against same-day press reports of the first release. Windows without a release (August has no barometer) are dropped, not filled.
+
+**Predictors.** Three polling inputs known at the origin: the latest estimate, its change from the previous release, and days since that release (a release *on* the 10th counts from the 11th). For each artist, `log1p` of mean weekly streams of tracks crediting them (collaborations included) in Spotify's weekly Spain Top 200, over weeks ending in the previous month. A week without a chart entry is zero *chart-listed* streams, not zero listening; no chart file was missing. Weeks count as available eight days after they end, a declared convention.
+
+```{r sample-table, echo=FALSE}
+html_table(
+  "<tr><th>Quantity</th><th class='num'>Count</th></tr>",
+  list(c(td("CIS barometers (Nov 2022 &ndash; Dec 2024; the two 2022 releases enter only as history)"), td(n_cis, "num")),
+       c(td("Monthly forecast origins, Jan 2023 &ndash; Oct 2024"), td(n_origins, "num")),
+       c(td(paste0("Usable development cases (inputs and a target; ", paste(lost_dev, collapse = " and "), " have no release in the window)")), td(n_common, "num")),
+       c(td("Training cases available before the first 2024 validation block"), td(n_tr_f1, "num")),
+       c(td("Weekly Spain Top 200 files audited (Dec 2022 &ndash; Dec 2024)"), td(n_weeks, "num"))),
+  caption = "Table 1. Development sample",
+  note = "Source: original CIS barometer PDFs and Spotify weekly charts; counts computed from the frozen model frame.")
+```
+
+Table 1 shows how small the problem is: `r n_common` usable months, of which only `r n_tr_f1` precede the first validation block.
+
+**Design history.** My design of 14 October, the course's deadline, forecast Fratelli d'Italia's polling from Italian rap streaming. I then accidentally gave an AI tool access to Italian files meant for training and testing, by my account including at least one late-2025 chart (not independently documented). No Italian model had been fitted, so this was possible design contamination, not demonstrated model leakage. As a precaution I restarted with Spain, after the deadline and without instructor approval; the Spain protocol predates any Spain analysis.
+
+**Decisions that could have gone otherwise**, each dated in `AMENDMENTS.md` (times from files, not version control):
+
+- *CIS only*: auditing other pollsters' release dates and permissions was not feasible in time.
+- *Monthly, not weekly*: the protocol's weekly design needed 30 training weeks; CIS gives `r wk_train`, so its pre-specified monthly fallback applied, decided on poll counts before any music feature existed.
+- *Weekly charts aggregated to months*, as I hold no daily charts.
+- *Three artists, not five*: Delarue and Moha The B never entered the Top 200 in `r n_weeks` weeks (Morad `r wk_of("Morad")`, Beny Jr `r wk_of("Beny Jr")`, Cyril Kamer `r wk_of("Cyril Kamer")`), so their measure would be constant. I dropped them after a names-and-week-counts audit, before computing any stream value, departing from my protocol.
+
+# What I did, and why that
+
+I compare three forecasts on identical cases.
+
+```{r models-table, echo=FALSE}
+html_table(
+  "<tr><th>Model</th><th>Inputs</th><th>Role</th></tr>",
+  list(c(td("M0 Persistence"), td("Latest published CIS estimate"), td("Benchmark every model must beat")),
+       c(td("M1 Polling-only ridge"), td("Latest estimate, last change, days since release"), td("What polling history alone predicts")),
+       c(td("M2 Polling + Spotify ridge"), td("M1 inputs + three artists' chart-listed streams"), td("Adds the music signal"))),
+  caption = "Table 2. Forecasting models")
+```
+
+The quantity of interest is the difference in mean absolute error, M2 minus M1. A negative value would mean the streams add information. Beating M1 is not enough, however, if both lose to persistence, a hard benchmark for slow-moving series (Hyndman and Athanasopoulos 2021).
+
+**Why ridge.** With so few training cases and correlated inputs, unpenalised regression would produce unstable coefficients. Ridge shrinks every coefficient while keeping all pre-chosen inputs, so M1 and M2 differ only by the music variables (Hoerl and Kennard 1970). The lasso, the obvious alternative, would with this little data delete inputs erratically and so change the comparison itself. Elastic net (α = 0.5), which mixes both penalties (Zou and Hastie 2005), serves as the one robustness check. All models use `glmnet` (Friedman, Hastie and Tibshirani 2010).
+
+**Training and validation.** The data are a time series, so nothing is split at random. In 2024 the models are validated forward in three quarterly blocks (Table 3). A training case enters only if its target window had closed and its releases were public before the block's cutoff. Scaling is learned on each block's training cases only. The penalty λ is chosen from a fixed grid of 80 values by pooled mean absolute error over the 2024 validation forecasts. The 2024 errors therefore also served for tuning and **are not an independent estimate of performance**.
+
+```{r folds-table, echo=FALSE}
+cuts <- as.Date(c("2024-01-01", "2024-04-01", "2024-07-01"))
+fr <- lapply(seq_along(cuts), function(k) {
+  ntr <- sum(mf$common_case & mf$origin < cuts[k] & mf$target_mature_at <= cuts[k])
+  vo  <- unique(fp$origin[fp$fold == paste0("F", k)])
+  c(td(paste0("2024 Q", k)), td(format(cuts[k], "%d %b %Y")), td(ntr, "num"), td(length(vo), "num"),
+    td(paste(format(as.Date(vo), "%b"), collapse = ", ")))
+})
+html_table(
+  "<tr><th>Block</th><th>Training cutoff</th><th class='num'>Training cases</th><th class='num'>Forecasts</th><th>Forecast origins</th></tr>",
+  fr, caption = "Table 3. Forward validation in 2024",
+  note = "July 2024 has no forecast because its target window (10 Aug &ndash; 10 Sep) contains no CIS release.")
+```
+
+Training thus grows only from `r min(fp$n_train)` to `r max(fp$n_train)` cases (Table 3). After tuning, each model was refitted on all `r n_common` development cases, and the code, model frame and fitted models were hashed (17:38, 29 October 2026). I then opened 2025 once, as an **exploratory out-of-time test** (scoring lock 18:10). Today's files match that manifest; the order of events rests on file timestamps, not an authenticated log, and the freeze does not undo earlier exposure to 2025 polling news (Section 4).
+
+<details class="repro"><summary>Reproducibility checks run at every knit (all must pass for this page to exist)</summary>
+
+```{r repro, echo=TRUE}
+# 1. Raw CIS PDFs are byte-identical to the inventory, and every value was checked by eye.
+pdf_files <- file.path("data/raw/cis_2023_2024", cis$year, cis$file)
+stopifnot(all(vapply(pdf_files, sha, "") == cis$sha256), all(cis$verified_by_eye))
+
+# 2. Raw PDFs -> targets: re-extract the Vox estimate (3rd number of the VOX row) now.
+extract_vox <- function(f) {
+  pg <- pdftools::pdf_text(f)
+  ok <- grepl("voto v.{1,2}lido", pg, ignore.case = TRUE) & grepl("voto directo", pg, ignore.case = TRUE)
+  ln <- strsplit(pg[max(which(ok))], "\n", fixed = TRUE)[[1]]
+  row <- ln[grepl("^\\s*VOX\\b", ln)]
+  tok <- regmatches(row, gregexpr("[\\x{00B1}+-]?\\s?[0-9]{1,3}(?:,[0-9]{1,2})?(?![0-9])", row, perl = TRUE))[[1]]
+  as.numeric(sub(",", ".", tok[3], fixed = TRUE))
+}
+stopifnot(isTRUE(all.equal(vapply(pdf_files, extract_vox, 0), cis$vox_estimate_valid, check.attributes = FALSE)))
+
+# Manifest lines are "<relative path> <sha256>"; the hash is the last field, so paths may contain spaces.
+read_manifest <- function(f) {
+  x <- grep("\\s[0-9a-f]{64}$", readLines(f), value = TRUE)
+  cbind(sub("\\s+[0-9a-f]{64}$", "", x), sub("^.*\\s", "", x))
+}
+
+# 3. The frozen model, code and model frame are unchanged since the freeze.
+man <- read_manifest("reports/results/fit_freeze_manifest.txt")
+stopifnot(nrow(man) == 4)
+stopifnot(all(vapply(man[, 1], sha, "") == man[, 2]))
+
+# 4. Rebuild: re-run the fitting script on the frozen model frame in a temporary folder
+#    and compare with the frozen development metrics.
+tmp <- tempfile("rebuild"); dir.create(file.path(tmp, "R"), recursive = TRUE)
+dir.create(file.path(tmp, "data/processed"), recursive = TRUE)
+invisible(file.copy("R/08_fit_models.R", file.path(tmp, "R")))
+invisible(file.copy("data/processed/model_frame_monthly.csv", file.path(tmp, "data/processed")))
+local({                       # run inside the temporary folder only; working directory is restored
+  owd <- setwd(tmp); on.exit(setwd(owd))
+  invisible(capture.output(source("R/08_fit_models.R", local = new.env())))
+})
+rebuilt <- read.csv(file.path(tmp, "reports/results/model_metrics.csv"))
+stopifnot(max(abs(as.matrix(rebuilt[, 3:6]) - as.matrix(dev[, 3:6]))) < 1e-8)
+
+# 5. The 2025 test was scored once, with exactly these inputs and code.
+lock <- read_manifest("reports/results/test2025_lock.txt")
+stopifnot(nrow(lock) == 10)
+stopifnot(all(vapply(lock[, 1], sha, "") == lock[, 2]))
+
+# 6. Reported metrics equal those recomputed from the frozen prediction files.
+recompute <- function(p) do.call(rbind, lapply(split(p, list(p$design, p$model), drop = TRUE), function(d)
+  data.frame(design = d$design[1], model = d$model[1], MAE = mean(abs(d$prediction - d$observed)))))
+for (pair in list(list(fp, dev), list(p25, t25))) {
+  r <- recompute(pair[[1]]); m <- merge(r, pair[[2]], by = c("design", "model"))
+  stopifnot(max(abs(m$MAE.x - m$MAE.y)) < 1e-10)
+}
+cat("All six checks passed.")
+```
+
+Checks 1&ndash;2 run from the raw CIS PDFs; the music features enter through the hashed model frame. A separate rebuild from the raw chart files to this frame, run on the author's computer, is documented in `reports/audit/repro/`.
+</details>
+
+# What I found, and how well I measured it
+
+**The streaming indicators did not deliver robust incremental forecasting value.** They helped a little during development and hurt on the 2025 test, and persistence was more accurate than every learned model in both periods.
+
+```{r results-table, echo=FALSE}
+lab <- c(M0 = "Persistence", M1 = "Polling-only ridge", M2 = "Polling + Spotify ridge")
+key <- list(c("Baseline", "M0"), c("Ridge", "M1"), c("Ridge", "M2"))
+rows <- lapply(key, function(k) {
+  v <- c(get(dev, k[1], k[2], "MAE"), get(dev, k[1], k[2], "RMSE"), get(dev, k[1], k[2], "bias"),
+         get(t25, k[1], k[2], "MAE"), get(t25, k[1], k[2], "RMSE"), get(t25, k[1], k[2], "bias"))
+  c(td(lab[[k[2]]]), vapply(v, function(x) td(sub("^-", "\u2212", f2(x)), "num"), ""))
+})
+html_table(paste0(
+  "<tr><th rowspan='2'>Model</th><th colspan='3' class='grp'>2024 development validation (n = ", n_val,
+  ")</th><th colspan='3' class='grp'>2025 exploratory test (n = ", n_test, ")</th></tr>",
+  "<tr><th class='num'>MAE</th><th class='num'>RMSE</th><th class='num'>Bias</th>",
+  "<th class='num'>MAE</th><th class='num'>RMSE</th><th class='num'>Bias</th></tr>"),
+  rows, caption = "Table 4. Forecast error by model and period",
+  note = paste0("All values in percentage points (pp) of the CIS vote-share estimate. MAE: mean absolute error; RMSE: root mean squared error (penalises large misses); Bias: mean of prediction minus observed. 2024 errors were also used to choose &lambda;; 2025 forecasts come from models frozen before 2025 was opened. Forecasts issued in ",
+               lost_dev[2], " and ", lost_25, " are absent because no CIS release fell in their target window."))
+```
+
+In development, the music variables lowered the ridge model's error by `r f2(-d_dev)` points (M2 `r pp(mae(dev,"Ridge","M2"))` against M1 `r pp(mae(dev,"Ridge","M1"))`). Persistence was still better, at `r pp(mae(dev,"Baseline","M0"))`. On the `r n_test` forecasts for 2025 the sign reversed: M2 erred by `r pp(mae(t25,"Ridge","M2"))`, `r f2(d_25)` points more than M1 (`r pp(mae(t25,"Ridge","M1"))`), while persistence erred by `r pp(mae(t25,"Baseline","M0"))`. With `r n_val` and `r n_test` forecasts these differences are descriptive; I report no significance tests.
+
+The bias columns show *how* the models failed in 2025. The polling-only model under-forecast every month (bias `r sgn(get(t25,"Ridge","M1","bias"))`, equal in size to its MAE): its development-selected penalty (λ = `r f2(lam_r1)`) had shrunk it towards the 2023–24 average. The music model was almost unpenalised (λ = `r formatC(lam_r2, format = "f", digits = 4)`). Its positive bias (`r sgn(get(t25,"Ridge","M2","bias"))`) comes from its last three forecasts (`r paste(last3_months[1], "to", last3_months[3])`), which jumped to between `r f2(last3_range[1])` and `r f2(last3_range[2])` per cent and account for `r round(100 * share3)`% of its absolute error; before that it also under-forecast (mean bias `r sgn(early_bias2)`).
+
+```{r figure, echo=FALSE, fig.cap="Figure 1. Observed target and forecasts, in % of the valid vote. Each point is a forecast issued on the 10th of the month shown; the observed value is the mean CIS estimate first released between the 10th of the next month and the 10th of the month after. Left: 2024 development validation, whose errors were also used to choose λ. Right: exploratory 2025 test of the frozen models. The periods are not joined."}
+all <- rbind(fp[, c("design", "model", "origin", "observed", "prediction")],
+             p25[, c("design", "model", "origin", "observed", "prediction")])
+all$origin <- as.Date(all$origin)
+sel <- function(d, m) {                       # insert NA rows for months without a forecast,
+  x <- all[all$design == d & all$model == m, ]   # so that lines break instead of bridging gaps
+  full <- data.frame(origin = seq(min(x$origin), max(x$origin), by = "month"))
+  x <- merge(full, x, by = "origin", all.x = TRUE); x[order(x$origin), ] }
+ser <- list(obs = sel("Baseline", "M0"), m1 = sel("Ridge", "M1"), m2 = sel("Ridge", "M2"))
+col <- c(obs = "#1b1b1b", m0 = "#7f7f7f", m1 = "#0072B2", m2 = "#D55E00")
+yl  <- range(all$observed, all$prediction) + c(-0.5, 0.5)
+op  <- par(mfrow = c(1, 2), mar = c(4.2, 4.4, 2.2, 0.8), family = "sans", las = 1,
+           cex.axis = 0.85, cex.lab = 0.9, mgp = c(2.7, 0.6, 0), tcl = -0.3, bty = "l")
+for (yr in c("2024", "2025")) {
+  pick <- function(x) x[format(x$origin, "%Y") == yr, ]
+  o <- pick(ser$obs)
+  od <- o$origin[!is.na(o$observed)]
+  xr <- range(od) + c(-12, 12)                # each panel spans only its own forecast months
+  plot(o$origin, o$observed, type = "n", ylim = yl, xlim = xr, xaxt = "n",
+       xlab = "Forecast issued (10th of month)", ylab = if (yr == "2024") "Vox, target-window CIS estimate (% valid vote)" else "")
+  ticks <- seq(min(od), max(od), by = "month")
+  axis.Date(1, at = ticks, labels = format(ticks, "%b"), cex.axis = 0.75, gap.axis = 0.2)  # label every month
+  abline(h = pretty(yl), col = "#EEF1F5", lwd = 0.8)
+  lines(o$origin, o$prediction, type = "b", lty = 2, pch = 1, col = col["m0"], lwd = 1.4)
+  lines(pick(ser$m1)$origin, pick(ser$m1)$prediction, type = "b", pch = 2, col = col["m1"], lwd = 1.6)
+  lines(pick(ser$m2)$origin, pick(ser$m2)$prediction, type = "b", pch = 0, col = col["m2"], lwd = 1.6)
+  lines(o$origin, o$observed, type = "b", pch = 19, col = col["obs"], lwd = 2.2)
+  title(main = if (yr == "2024") "2024 development validation" else "2025 exploratory test",
+        adj = 0, font.main = 1, cex.main = 0.95)
+  if (yr == "2024") legend("topleft", bty = "n", cex = 0.8, lwd = c(2.2, 1.4, 1.6, 1.6), lty = c(1, 2, 1, 1),
+                           pch = c(19, 1, 2, 0), col = col,
+                           legend = c("Observed CIS target", "Persistence", "Polling-only ridge", "Polling + Spotify ridge"))
+}
+par(op)
+```
+
+Figure 1 makes the reversal visible. In 2024 the two ridge models track each other closely. In 2025 the polling-only model stays flat below the rising observed series, and the music model breaks away upwards in its last three forecasts.
+
+```{r check-table, echo=FALSE}
+html_table(
+  "<tr><th>Estimator for M1 and M2</th><th class='num'>M2 &minus; M1, 2024</th><th class='num'>M2 &minus; M1, 2025</th></tr>",
+  list(c(td("Ridge (main analysis)"), td(sgn(d_dev), "num"), td(sgn(d_25), "num")),
+       c(td("Elastic net, &alpha; = 0.5 (the check)"), td(sgn(c_dev), "num"), td(sgn(c_25), "num"))),
+  caption = "Table 5. The check: difference in MAE when the music variables are added",
+  note = "Negative values favour adding the Spotify variables. Same cases, inputs, folds, penalty grid and scoring rule in both rows.")
+```
+
+**The check.** A real signal should not depend on the penalty, so I replaced both ridge models with elastic net and changed nothing else. The conclusion did not move (Table 5): the music variables helped slightly in development (`r sgn(c_dev)`) and hurt in 2025 (`r sgn(c_25)`). The small development gain is therefore not specific to ridge, and it did not survive the change of period; this does not show that the streams carry no signal.
+
+# What I do not trust
+
+**What this establishes.** With this sample and procedure, the artists' chart-listed streams did not improve forecasts robustly, did not beat persistence, and the development gain reversed out of time. **What it does not establish.** It does not show that cultural visibility is unrelated to radical-right politics, that a different measure or model would fail, or anything causal in either direction.
+
+**Limitation 1: too few independent forecasts, reused for tuning.** M2 has six inputs and at most `r max(fp$n_train)` training months. The same `r n_val` forecasts chose λ and produced the development scores. Tuning chose almost no shrinkage for M2 and heavy shrinkage for M1, a pattern consistent with fitting noise and with the extreme late-2025 music-model forecasts; I did not inspect the 2025 inputs further. The remedy is not more features but more independent targets (for example several pollsters under the same first-release rules, making the weekly design feasible) and nested tuning.
+
+**Limitation 2: the music measure sees chart hits, not audiences.** A Top 200 count records an artist only in weeks with a hit; two planned artists never charted, and Cyril Kamer was absent in `r zero_cyril` of `r n_months_music` months. The variable may track release cycles and platform dynamics more than political context. A valid test needs artist-level stream totals for all five artists, defined before modelling.
+
+**Limitation 3: design history and exposure.** The design is narrower than planned and post-dates the course deadline (Section 1). I decided to open 2025 after seeing the development results, and AI-assisted searches had returned 2025–26 Spanish polling headlines (records ES-E01–E03 and E06 in `reports/audit/`; no value used), so 2025 is exploratory, not a pristine holdout. The monthly unit was not confirmed with the instructor.
+
+# References {-}
+
+Ahmed González, S. (2024). Autenticidad, colectividad e identidad: el drill M.D.L.R. en España. *TRANS – Revista Transcultural de Música*, 28. https://www.sibetrans.com/trans/articulo/677/autenticidad-colectividad-e-identidad-el-drill-m-d-l-r-en-espana
+
+Cranmer, S. J., & Desmarais, B. A. (2017). What can we learn from predictive modeling? *Political Analysis*, 25(2), 145–166.
+
+Friedman, J., Hastie, T., & Tibshirani, R. (2010). Regularization paths for generalized linear models via coordinate descent. *Journal of Statistical Software*, 33(1), 1–22.
+
+Gayo-Avello, D. (2013). A meta-analysis of state-of-the-art electoral prediction from Twitter data. *Social Science Computer Review*, 31(6), 649–679.
+
+Hoerl, A. E., & Kennard, R. W. (1970). Ridge regression: Biased estimation for nonorthogonal problems. *Technometrics*, 12(1), 55–67.
+
+Hyndman, R. J., & Athanasopoulos, G. (2021). *Forecasting: Principles and practice* (3rd ed.). OTexts. https://otexts.com/fpp3/
+
+Turnbull-Dugarte, S. J. (2019). Explaining the end of Spanish exceptionalism and electoral support for Vox. *Research & Politics*, 6(2), 1–8. https://doi.org/10.1177/2053168019851680
+
+Zou, H., & Hastie, T. (2005). Regularization and variable selection via the elastic net. *Journal of the Royal Statistical Society: Series B*, 67(2), 301–320.
+
+**Data.** Centro de Investigaciones Sociológicas, *Barómetros*, "Estimación de voto" PDFs, November 2022 – November 2025 (cis.es), with first-release dates and source links in `data/metadata/`. Spotify Charts, Weekly Top Songs Spain, December 2022 – September 2025 (charts.spotify.com). The instructor advised that no permission was needed for this course project; the raw files are included in the project repository (`README_REPRODUCE.md`).
+
+# Appendix: AI use {-}
+
+<div class="table-wrap"><table class="rtable ailog">
+<colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"></colgroup>
+<thead><tr><th>#</th><th>Date</th><th>Purpose</th><th>What I asked</th><th>What I did with the output</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>29 Oct 2026</td><td>Checking</td><td>Test my inventory script before running it</td><td>Edited: it found that files inside a "2025" folder would be opened and that CSVs with a byte-order mark failed; I used the corrected script.</td></tr>
+<tr><td>2</td><td>29 Oct 2026</td><td>Explaining</td><td>Step-by-step RStudio project setup on macOS</td><td>Used, with one change: I moved the project out of iCloud after storage errors.</td></tr>
+<tr><td>3</td><td>29 Oct 2026</td><td>Coding</td><td>Script to audit one CIS PDF's layout with digits masked</td><td>Used: it showed a text layer and the same Vox row layout in 2023 and 2024.</td></tr>
+<tr><td>4</td><td>29 Oct 2026</td><td>Coding</td><td>Script to extract the Vox estimate from the CIS PDFs</td><td>Rejected the first version: it assumed the first column was the target. I checked the PDF; the target is column 3 (% valid vote), not direct vote (% census).</td></tr>
+<tr><td>5</td><td>29 Oct 2026</td><td>Debugging</td><td>Why four PDFs gave "header not found"</td><td>Edited: it pointed to the file names; I confirmed they were the wrong CIS documents and downloaded the correct ones.</td></tr>
+<tr><td>6</td><td>29 Oct 2026</td><td>Debugging</td><td>Why one PDF failed the row-layout check</td><td>Used: the value was printed without decimals; the extractor now accepts and flags such values, and I verified it by eye.</td></tr>
+<tr><td>7</td><td>29 Oct 2026</td><td>Checking</td><td>Compare my pipeline with the Track A template</td><td>Used: MAE/RMSE with persistence instead of a confusion matrix; elastic net as the one check.</td></tr>
+<tr><td>8</td><td>29 Oct 2026</td><td>Checking</td><td>Whether weekly charts may be aggregated to months</td><td>Edited: it noted my protocol allowed only two monthly measures; I recorded a third as a dated amendment before computing any feature.</td></tr>
+<tr><td>9</td><td>29 Oct 2026</td><td>Checking</td><td>Why the calendar script stopped on duplicate dates</td><td>Used: six 2024 PDFs had been regenerated by CIS on one day; I switched to official release dates.</td></tr>
+<tr><td>10</td><td>29 Oct 2026</td><td>Checking</td><td>Collect official CIS first-release dates</td><td>Used, with sources: 22 from CIS notices, 2 from same-day press; one release fell exactly on the 10th, so dates mattered.</td></tr>
+<tr><td>11</td><td>29 Oct 2026</td><td>Checking</td><td>Audit artist spellings in the charts</td><td>Edited: the broad search also matched other artists ("benny blanco", "CYRIL"); I excluded them. Two planned artists never charted; I reduced the set to three and recorded why.</td></tr>
+<tr><td>12</td><td>29 Oct 2026</td><td>Debugging</td><td>Why the model script crashed inside glmnet</td><td>Edited: raised the iteration limit and computed predictions from coefficients, with a hard stop if the path is incomplete. Done before any result was seen.</td></tr>
+<tr><td>13</td><td>29 Oct 2026</td><td>Coding</td><td>Scripts to score 2025 once with the frozen models</td><td>Used: freeze check, by-eye verification gate and a lock against re-scoring. The 2025 result reversed the development result and is reported as is.</td></tr>
+<tr><td>14</td><td>29 Oct 2026</td><td>Drafting</td><td>First draft of the report prose</td><td>Edited: I replaced its research question with my own; later superseded by episode 16.</td></tr>
+<tr><td>15</td><td>29 Oct 2026</td><td>Checking</td><td>Feedback on my rewritten research question and draft</td><td>Edited: I dropped "four-week-ahead" because the analysis is monthly. The feedback also caught that the first draft cited Turnbull-Dugarte (2019) for a claim the paper does not make; I removed it.</td></tr>
+<tr><td>16</td><td>29 Oct 2026</td><td>Drafting</td><td>Full academic and visual revision of the report from a revision brief I wrote</td><td>Edited: it verified the two framing sources, which showed that Cyril Kamer is not in the M.D.L.R. article and that Turnbull-Dugarte's 2018 Andalusian analysis finds no immigration link; I narrowed the claims accordingly. Results, models and data unchanged.</td></tr>
+<tr><td>17</td><td>29 Oct 2026</td><td>Checking</td><td>Final integrity audit and revision from a second brief I wrote (Italy history, chronology, exposure, sources)</td><td>Edited: it found that my late-2025 Italian chart exposure is documented only by my own account and that the event order rests on file timestamps; the report now says so. Results, models and data unchanged.</td></tr>
+<tr><td>18</td><td>29 Oct 2026</td><td>Checking</td><td>Independent reproducibility test of the whole pipeline in a fresh R setup on my computer</td><td>Used: the model frame was rebuilt byte-identically from the raw files and the development fit reproduced exactly; it found that the hash check would break on file names with spaces, which is now fixed. The chart files never left my computer. Results unchanged.</td></tr>
+</tbody></table>
+<p class="table-note">One row per task episode. Prompts and chat logs are not included, as the guide requires.</p></div>
+
+<!-- STUDENT: rewrite or confirm the paragraph below in your own words before submitting (max 150 words). -->
+**What the tools were good and bad at.** AI was most useful for the safeguards I would not have built alone: hash checks, release-date rules and a lock that prevents re-scoring the test. It was also quick at diagnosing errors. It was unreliable wherever the answer depended on the documents themselves. It assumed the wrong column of the CIS table, guessed the wrong reason four PDFs failed, matched unrelated musicians in its first artist search, and once attributed a claim to a source that does not make it. I caught each of these only by opening the original PDF, chart file or article. It also tended to propose more procedure than a short project needs, so I had to decide what mattered.

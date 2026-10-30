@@ -1,0 +1,24 @@
+"keyword","page","line","masked_text","n_columns"
+"estimacion",1,1,"ESTIMACIÓN DE VOTO",1
+"estimacion",2,2,"Estudio nº ####. Barómetro de junio ####                                                             ESTIMACIÓN DE VOTO",2
+"estimacion",2,9,"Ficha técnica estimación Barómetro de junio E####",1
+"estimacion",2,11,"El Centro de Investigaciones Sociológicas aplica desde hace años una metodología de estimación de apoyo electoral",1
+"estimacion",2,17,"(estimación) de cada una de ellas en diferentes presupuestos. El resultado de dicha labor desarrolla teórica y",1
+"estimacion",2,22,"esta manera, cualquiera puede aplicar sus propios modelos para el cálculo de estimaciones de voto, modelos que",1
+"estimacion",2,23,"pueden dar lugar a estimaciones diferentes a las del CIS.",1
+"estimacion",2,25,"Una información más detallada de los análisis efectuados para la estimación electoral de este estudio puede",1
+"estimacion",2,26,"consultarse en el documento ‘Informe técnico de la estimación del Estudio ####: Barómetro de junio ####’. Puede",1
+"estimacion",2,48,"y métodos prospectivos se desarrolla más ampliamente en Alaminos, A (####) El método de escenarios en la estimación de",1
+"estimacion",3,2,"Estudio nº ####. Barómetro de junio ####                                                ESTIMACIÓN DE VOTO",2
+"estimacion",3,12,"Voto directo en                          Estimación de",2
+"voto_valido",3,15,"censo)                                voto válido)",2
+"intencion",2,12,"basada en la especificación de escenarios. Una medición por escenarios que no posee intención prospectiva y se",1
+"vox",3,20,"VOX                                       #,#                ±#,#                 ##,#",4
+"pp",3,19,"PP                                      ##,#                 ±#,#                 ##,#",4
+"psoe",3,18,"PSOE                                    ##,#                 ±#,#                 ##,#",4
+"sumar",3,21,"SUMAR**                                  #,#                 ±#,#                  #,#",4
+"sumar",3,42,"** El voto estimado de SUMAR agrupa a los partidos que firmaron la coalición excepto Podemos.",1
+"abstencion",3,35,"Abstención (“No votaría”)                #,#                 ±#,#",3
+"blanco_nulo",3,33,"En blanco                                #,#                 ±#,#                  #,#",4
+"blanco_nulo",3,34,"Voto nulo                                #,#                 ±#,#",3
+"no_sabe",3,36,"No sabe                                 ##,#                 ±#,#",3

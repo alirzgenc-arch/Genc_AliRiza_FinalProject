@@ -1,0 +1,7 @@
+Spain v4.1 - 2025 preparation (exploratory evaluation, D52). Counts only, nothing scored.
+Freeze manifest: VERIFIED (model and code unchanged since FIT_AND_CODE_FREEZE)
+CIS 2025 PDFs: 10 | studies: 3492, 3496, 3502, 3505, 3510, 3514, 3517, 3524, 3528, 3530
+CIS extraction status: EXTRACTED_UNVERIFIED=10
+Spotify 2025 weekly files OK: 39 / 39 expected
+Official 2025 release dates file present: TRUE
+NEXT: verify each 2025 value by eye (cis2025_manual_check.csv -> OK), then run R/10_score_2025.R

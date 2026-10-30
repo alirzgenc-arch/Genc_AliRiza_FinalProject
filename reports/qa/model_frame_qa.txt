@@ -1,0 +1,8 @@
+Spain v4.1 - FB-M model frame (K = 3, D51). Counts and flags only.
+Origins: 22 (2023-01-10 .. 2024-10-10)
+Common cases (polls + 3 music + target): 20
+F1 training pairs (mature before 2024-01-01): 9 (need >= 8)
+Validation blocks F1/F2/F3: 3/3/2 (need >= 2 each, >= 7 total)
+Music nonconstant in F1 training: morad=TRUE, beny_jr=TRUE, cyril_kamer=TRUE
+Leakage assertions: PASSED
+FB-M floors on common cases: PASS
